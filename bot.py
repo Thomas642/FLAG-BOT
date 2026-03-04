@@ -304,6 +304,14 @@ class FlagView(discord.ui.View):
             btn.callback = self._make_callback(country)
             self.add_item(btn)
 
+        stop_btn = discord.ui.Button(
+            label="⏹️ Stop",
+            style=discord.ButtonStyle.danger,
+            row=2,
+        )
+        stop_btn.callback = self._stop_callback
+        self.add_item(stop_btn)
+
     def _make_callback(self, chosen: str):
         async def callback(interaction: discord.Interaction):
             if interaction.user.id != self.session.user_id:
@@ -349,6 +357,30 @@ class FlagView(discord.ui.View):
 
         return callback
 
+    async def _stop_callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.session.user_id:
+            await interaction.response.send_message(
+                "❌ Ce quiz ne t'appartient pas !", ephemeral=True
+            )
+            return
+
+        for item in self.children:
+            item.disabled = True
+
+        if self.session.user_id in sessions:
+            del sessions[self.session.user_id]
+
+        embed = discord.Embed(
+            title="🛑 Quiz abandonné",
+            description=(
+                f"Tu as arrêté en cours de route.\n\n"
+                f"📊 Score à l'arrêt : **{self.session.score}/{self.session.total}**\n\n"
+                "Lance `/drapeau` quand tu veux recommencer !"
+            ),
+            color=discord.Color.red(),
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
+
     async def on_timeout(self):
         for item in self.children:
             item.disabled = True
@@ -376,7 +408,7 @@ async def on_ready():
     description="Lance un quiz des drapeaux.",
 )
 @app_commands.describe(questions="Nombre de drapeaux à deviner (1 à 250, défaut : 10)")
-async def flag_quiz(interaction: discord.Interaction, questions: int = 10):
+async def flag_quiz(interaction: discord.Interaction, questions: int = -1):
     user_id = interaction.user.id
 
     if user_id in sessions:
@@ -386,7 +418,7 @@ async def flag_quiz(interaction: discord.Interaction, questions: int = 10):
         )
         return
 
-    questions = max(1, min(questions, len(COUNTRIES)))
+    questions = len(COUNTRIES) if questions == -1 else max(1, min(questions, len(COUNTRIES)))
     pool = random.sample(COUNTRY_LIST, k=questions)
 
     session = QuizSession(user_id=user_id, questions=pool)
@@ -449,10 +481,10 @@ async def leaderboard(interaction: discord.Interaction):
             name = user.display_name
         except discord.NotFound:
             name = "Joueur inconnu"
-        lines.append(f"{medal} **{name}** | {score} pt(s)")
+        lines.append(f"{medal} **{name}** - {score} pt(s)")
 
     embed = discord.Embed(
-        title="🏆 Classement | Quiz des Drapeaux",
+        title="🏆 Classement - Quiz des Drapeaux",
         description="\n".join(lines),
         color=discord.Color.gold(),
     )
