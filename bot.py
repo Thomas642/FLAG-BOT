@@ -222,10 +222,10 @@ async def leaderboard(interaction: discord.Interaction):
             name = user.display_name
         except discord.NotFound:
             name = f"Utilisateur inconnu ({user_id})"
-        lines.append(f"{medal} **{name}** — {score} pt(s)")
+        lines.append(f"{medal} **{name}** - {score} pt(s)")
 
     embed = discord.Embed(
-        title="🏆 Classement — Quiz des Drapeaux",
+        title="🏆 Classement - Quiz des Drapeaux",
         description="\n".join(lines),
         color=discord.Color.gold(),
     )
